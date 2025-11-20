@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-Frame-Options" content="ALLOWALL">
+    <title>Fero Chat Demo - Looker Studio Embed</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: white;
+            color: #2c3e50;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: #ff6b35;
+            color: white;
+            padding: 20px;
+            border-radius: 8px 8px 0 0;
+            text-align: center;
+        }
+
+        .chat-container {
+            background: #fafbfc;
+            border: 1px solid #e1e4e8;
+            border-radius: 0 0 8px 8px;
+            min-height: 600px;
+            padding: 20px;
+        }
+
+        .message {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 15px;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .message.user {
+            flex-direction: row-reverse;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .user .avatar {
+            background: #ff6b35;
+            color: white;
+        }
+
+        .ai .avatar {
+            background: white;
+            border: 2px solid #ff6b35;
+            color: #ff6b35;
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 8px;
+            line-height: 1.6;
+            font-size: 14px;
+        }
+
+        .user .message-content {
+            background: #ff6b35;
+            color: white;
+        }
+
+        .ai .message-content {
+            background: white;
+            border: 1px solid #e1e4e8;
+        }
+
+        .analysis-card {
+            background: white;
+            border: 1px solid #e1e4e8;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+        }
+
+        .chart-container {
+            background: #f8f9fa;
+            border: 1px solid #e1e4e8;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 15px 0;
+            min-height: 300px;
+        }
+
+        .results-section {
+            background: white;
+            border: 1px solid #e1e4e8;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+        }
+
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .arrow-up { color: #ff6b35; }
+        .arrow-down { color: #4caf50; }
+
+        .root-cause-box {
+            background: #f9fafb;
+            border-left: 3px solid #ff6b35;
+            padding: 15px;
+            margin: 15px 0;
+            font-family: monospace;
+            font-size: 13px;
+            line-height: 1.8;
+        }
+
+        .btn {
+            background: #ff6b35;
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            margin: 20px auto;
+            display: block;
+        }
+
+        .btn:hover {
+            background: #e55a2b;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: #e1e4e8;
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 15px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #ff6b35;
+            width: 0;
+            animation: progress 3s ease-out forwards;
+        }
+
+        @keyframes progress {
+            to { width: 100%; }
+        }
+
+        .chart-header {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 10px;
+            font-size: 13px;
+        }
+
+        .chart-tag {
+            padding: 3px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .tag-blue {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .tag-orange {
+            background: #fbe9e7;
+            color: #d84315;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Fero Diagnostics Assistant</h1>
+            <p>Interactive Root Cause Analysis Demo</p>
+        </div>
+        
+        <div class="chat-container" id="chatContainer">
+            <!-- Messages will be inserted here -->
+        </div>
+        
+        <button class="btn" onclick="startDemo()">Start Demo</button>
+    </div>
+
+    <script>
+        const chatContainer = document.getElementById('chatContainer');
+        let messageIndex = 0;
+        let demoRunning = false;
+
+        const conversation = [
+            { type: 'user', text: 'Hey Fero, there was a breakout yesterday at 8:23 am. Help me figure out what went wrong?', delay: 0 },
+            { type: 'ai', text: 'I can help investigate that breakout. Let me gather some context first. Do you have any initial hypotheses about potential causes, or would you like me to start with a fresh investigation?', delay: 1500 },
+            { type: 'user', text: 'Fresh investigation', delay: 2000 },
+            { type: 'ai', text: "Understood. I'll help you conduct a systematic root cause analysis.\n\n1. Which furnace or casting line experienced the breakout?", delay: 1500 },
+            { type: 'user', text: 'EAF 2, during the third heat of the shift', delay: 2000 },
+            { type: 'ai', text: "Got it - EAF 2, third heat.\n\n2. What was the grade being produced?", delay: 1500 },
+            { type: 'user', text: 'Grade 1018, standard carbon steel', delay: 1800 },
+            { type: 'ai', text: "3. Were there any observable symptoms before the breakout?", delay: 1500 },
+            { type: 'user', text: 'The operators mentioned excessive foaming about 10 minutes before', delay: 2000 },
+            { type: 'ai', text: 'analysis', delay: 1500, special: true },
+            { type: 'ai', text: 'results', delay: 3000, special: true }
+        ];
+
+        function createMessage(type, text) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            
+            const avatar = document.createElement('div');
+            avatar.className = 'avatar';
+            avatar.textContent = type === 'user' ? 'E' : 'F';
+            
+            const content = document.createElement('div');
+            content.className = 'message-content';
+            content.textContent = text;
+            
+            messageDiv.appendChild(avatar);
+            messageDiv.appendChild(content);
+            
+            return messageDiv;
+        }
+
+        function createAnalysisCard() {
+            const card = document.createElement('div');
+            card.className = 'analysis-card';
+            card.innerHTML = `
+                <h3>📊 Analyzing Historical Data - EAF 2</h3>
+                <p style="color: #5e6d7e; margin: 10px 0;">Scanning patterns across critical process variables...</p>
+                <div class="progress-bar">
+                    <div class="progress-fill"></div>
+                </div>
+                
+                <div class="chart-header">
+                    <span>Y-AXIS | Targets and factors:</span>
+                    <span class="chart-tag tag-blue">Mold level Actual S1</span>
+                    <span class="chart-tag tag-orange">S1 BTU/Lb</span>
+                    <span class="chart-tag tag-blue">Caster Spray water temp</span>
+                </div>
+                
+                <div class="chart-container">
+                    <canvas id="chart" width="800" height="300"></canvas>
+                </div>
+                
+                <div style="display: flex; justify-content: space-between; margin-top: 10px; font-size: 12px; color: #5e6d7e;">
+                    <span>Start: 2025-11-16 13:30</span>
+                    <span>(3 days)</span>
+                    <span>End: 2025-11-19 10:30</span>
+                </div>
+            `;
+            
+            setTimeout(() => drawChart(), 100);
+            return card;
+        }
+
+        function createResultsCard() {
+            const card = document.createElement('div');
+            card.className = 'results-section';
+            card.innerHTML = `
+                <h3>RESULTS</h3>
+                
+                <div style="background: white; padding: 15px; border: 1px solid #e1e4e8; border-radius: 6px; margin-bottom: 20px;">
+                    <p style="font-size: 13px; color: #5e6d7e;">
+                        Number of rows in selection: <strong>156</strong> | Number of rows in baseline: <strong>237</strong><br>
+                        The production zone(s) accounted for <strong>140/156 (89.7%)</strong> of the selection.
+                    </p>
+                </div>
+                
+                <h4 style="color: #ff6b35; margin: 20px 0;">PRODUCTION ZONE 1</h4>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+                    <div>
+                        <h5 style="font-size: 12px; color: #5e6d7e; text-transform: uppercase; margin-bottom: 15px;">BASELINE COMPARISON</h5>
+                        
+                        <div class="metric-row">
+                            <span>Super Heat</span>
+                            <div>
+                                <span class="arrow-up">↑</span>
+                                <strong>65.030</strong> (up from 61.900)
+                                <span style="color: #ff6b35; font-size: 12px;">+5.057%</span>
+                            </div>
+                        </div>
+                        
+                        <div class="metric-row">
+                            <span>S1 BTU/Lb</span>
+                            <div>
+                                <span class="arrow-down">↓</span>
+                                <strong>5133.320</strong> (down from 5402.270)
+                                <span style="color: #4caf50; font-size: 12px;">-4.978%</span>
+                            </div>
+                        </div>
+                        
+                        <div class="metric-row">
+                            <span>Mold Water Delta T S1</span>
+                            <div>
+                                <span class="arrow-up">↑</span>
+                                <strong>173.710</strong> (up from 162.760)
+                                <span style="color: #ff6b35; font-size: 12px;">+6.728%</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h5 style="font-size: 12px; color: #5e6d7e; text-transform: uppercase; margin-bottom: 15px;">ROOT CAUSE CONDITIONS</h5>
+                        
+                        <div class="root-cause-box">
+                            62.37 < <strong>Super Heat</strong> < 66.37<br>
+                            <span style="color: #ff9800; font-weight: bold;">AND</span><br>
+                            5026.23 < <strong>S1 BTU/Lb</strong> < 5227.96<br>
+                            <span style="color: #ff9800; font-weight: bold;">AND</span><br>
+                            170 < <strong>Mold Water Delta T S1</strong> < 177<br>
+                            <span style="color: #ff9800; font-weight: bold;">AND</span><br>
+                            102.99 < <strong>S1_GATEPERCENT</strong> < 123.44
+                        </div>
+                        
+                        <button style="background: #4da6ff; color: white; border: none; padding: 10px 20px; border-radius: 4px; margin-top: 15px; cursor: pointer;">
+                            Create an Alert from these conditions
+                        </button>
+                    </div>
+                </div>
+            `;
+            return card;
+        }
+
+        function drawChart() {
+            const canvas = document.getElementById('chart');
+            if (!canvas) return;
+            
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            // Background
+            ctx.fillStyle = '#f8f9fa';
+            ctx.fillRect(0, 0, width, height);
+            
+            // Grid lines
+            ctx.strokeStyle = '#e1e4e8';
+            ctx.lineWidth = 0.5;
+            for (let i = 0; i <= 10; i++) {
+                const y = (height / 10) * i;
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(width, y);
+                ctx.stroke();
+            }
+            
+            // Sample data lines
+            ctx.lineWidth = 2;
+            
+            // Blue line (Mold level)
+            ctx.strokeStyle = '#4da6ff';
+            ctx.beginPath();
+            for (let i = 0; i < width; i += 5) {
+                const y = height / 2 + Math.sin(i / 50) * 30 + (i > 400 && i < 500 ? 50 : 0);
+                if (i === 0) ctx.moveTo(i, y);
+                else ctx.lineTo(i, y);
+            }
+            ctx.stroke();
+            
+            // Orange line (BTU)
+            ctx.strokeStyle = '#ff6b35';
+            ctx.beginPath();
+            for (let i = 0; i < width; i += 5) {
+                const y = height / 2 + Math.cos(i / 40) * 25 + (i > 420 && i < 480 ? -40 : 0);
+                if (i === 0) ctx.moveTo(i, y);
+                else ctx.lineTo(i, y);
+            }
+            ctx.stroke();
+            
+            // Add incident marker
+            ctx.strokeStyle = '#ff0000';
+            ctx.setLineDash([5, 3]);
+            ctx.beginPath();
+            ctx.moveTo(450, 0);
+            ctx.lineTo(450, height);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // Label
+            ctx.fillStyle = '#ff0000';
+            ctx.font = '12px sans-serif';
+            ctx.fillText('Breakout Event', 460, 20);
+        }
+
+        async function playConversation() {
+            for (const item of conversation) {
+                if (!demoRunning) break;
+                
+                await new Promise(resolve => setTimeout(resolve, item.delay));
+                
+                if (item.special) {
+                    if (item.text === 'analysis') {
+                        chatContainer.appendChild(createAnalysisCard());
+                    } else if (item.text === 'results') {
+                        chatContainer.appendChild(createResultsCard());
+                    }
+                } else {
+                    chatContainer.appendChild(createMessage(item.type, item.text));
+                }
+                
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+            demoRunning = false;
+        }
+
+        function startDemo() {
+            if (demoRunning) return;
+            chatContainer.innerHTML = '';
+            messageIndex = 0;
+            demoRunning = true;
+            playConversation();
+        }
+
+        // Auto-start on load
+        window.addEventListener('load', () => {
+            setTimeout(startDemo, 500);
+        });
+    </script>
+</body>
+</html>
